@@ -1,9 +1,13 @@
 /**
- * CodecksClient — TypeScript equivalent of codecks_cli/client.py.
+ * CodecksClient — TypeScript equivalent of codecks_cli/client.py + cards.py.
  * Wraps the Codecks HTTP API with typed methods for all MCP tool operations.
+ *
+ * IMPORTANT: Query format uses filter-in-key-name pattern matching the Codecks API.
+ * e.g., cards({"status":"started","visibility":"default"}) as the property name.
  */
 
-import { query, dispatch } from "./api.js";
+import { query, dispatch, reportRequest } from "./api.js";
+import { config } from "./config.js";
 import { CliError, SetupError } from "./errors.js";
 
 // ---------------------------------------------------------------------------
@@ -23,6 +27,31 @@ function parseIsoTimestamp(ts: unknown): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/** Build filter-embedded key name: cards({"status":"started"}) */
+function filteredKey(entity: string, filters: Record<string, unknown>): string {
+  return `${entity}(${JSON.stringify(filters)})`;
+}
+
+/** Parse comma-separated values and validate against allowed set */
+function parseMultiValue(value: string, allowed: Set<string>, label: string): string[] {
+  const values = value.split(",").map((s) => s.trim());
+  for (const v of values) {
+    if (!allowed.has(v)) {
+      throw new CliError(`[ERROR] Invalid ${label}: '${v}'. Valid: ${[...allowed].join(", ")}`);
+    }
+  }
+  return values;
+}
+
+const VALID_STATUSES = new Set([
+  "not_started",
+  "started",
+  "done",
+  "blocked",
+  "in_review",
+  "in_progress",
+]);
+
 // ---------------------------------------------------------------------------
 // CodecksClient
 // ---------------------------------------------------------------------------
@@ -32,11 +61,11 @@ export class CodecksClient {
 
   async getAccount(): Promise<Record<string, unknown>> {
     const result = await query({
-      _root: [{ account: ["id", "name", "email", "role"] }],
+      _root: [{ account: ["name", "id"] }],
     });
     const acct = result.account as Record<string, unknown> | undefined;
     if (!acct) throw new SetupError("[TOKEN_EXPIRED] Could not fetch account.");
-    return acct;
+    return result;
   }
 
   // ---- Cards ----
@@ -60,58 +89,67 @@ export class CodecksClient {
       updatedBefore?: string;
       archived?: boolean;
       includeStats?: boolean;
+      limit?: number;
+      offset?: number;
     } = {},
   ): Promise<Record<string, unknown>> {
-    // Build query filters
-    const filters: Record<string, unknown> = {};
-    if (options.status) {
-      const statuses = options.status.split(",").map((s) => s.trim());
-      filters.status = statuses.length === 1 ? statuses[0] : statuses;
-    }
-    if (options.priority) {
-      const pris = options.priority.split(",").map((p) => p.trim());
-      filters.priority = pris.length === 1 ? pris[0] : pris;
-    }
-    if (options.cardType === "hero") filters.cardType = "hero";
-    if (options.cardType === "doc") filters.cardType = "doc";
-    if (options.archived) filters.visibility = "archived";
-
-    const cardFields = [
-      "id",
+    const cardFields: unknown[] = [
       "title",
       "status",
       "priority",
+      "deckId",
       "effort",
       "createdAt",
+      "milestoneId",
+      "masterTags",
       "lastUpdatedAt",
-      { assignee: ["name"] },
-      { deck: ["title"] },
-      { milestone: ["title"] },
-      { masterTags: ["name"] },
+      "isDoc",
+      "childCardInfo",
+      { assignee: ["name", "id"] },
     ];
+    if (options.search) cardFields.push("content");
 
-    const q: Record<string, unknown> = {
-      _root: [
-        {
-          account: [
-            {
-              [`${options.archived ? "archivedCards" : "cards"}`]: cardFields,
-            },
-          ],
-        },
-      ],
+    // Build server-side filter
+    const cardQuery: Record<string, unknown> = {
+      visibility: options.archived ? "archived" : "default",
+    };
+
+    // Parse and apply status filter (single value = server-side)
+    let clientStatusFilter: string[] | null = null;
+    if (options.status) {
+      const statuses = parseMultiValue(options.status, VALID_STATUSES, "status");
+      if (statuses.length === 1) {
+        cardQuery.status = statuses[0];
+      } else {
+        clientStatusFilter = statuses;
+      }
+    }
+
+    // Resolve deck filter to ID
+    if (options.deck) {
+      const decksResult = await this.listDecks();
+      const decks = (decksResult.decks ?? []) as Record<string, unknown>[];
+      const deck = decks.find(
+        (d) => String(d.title ?? "").toLowerCase() === options.deck!.toLowerCase(),
+      );
+      if (deck) {
+        cardQuery.deckId = deck.id;
+      } else {
+        throw new CliError(`[ERROR] Deck '${options.deck}' not found.`);
+      }
+    }
+
+    const q = {
+      _root: [{ account: [{ [filteredKey("cards", cardQuery)]: cardFields }] }],
     };
 
     const result = await query(q);
     let cards = this.extractCards(result);
 
     // Client-side filtering
-    if (options.deck) {
-      cards = cards.filter(
-        (c) =>
-          String(getField(c, "deck_name", "deckName") ?? "").toLowerCase() ===
-          options.deck!.toLowerCase(),
-      );
+    if (clientStatusFilter) {
+      const allowed = new Set(clientStatusFilter);
+      cards = cards.filter((c) => allowed.has(String(c.status ?? "")));
     }
     if (options.search) {
       const term = options.search.toLowerCase();
@@ -127,17 +165,20 @@ export class CodecksClient {
     }
     if (options.owner) {
       if (options.owner === "none") {
-        cards = cards.filter((c) => !c.owner_name);
+        cards = cards.filter((c) => !c.assignee);
       } else {
         const name = options.owner.toLowerCase();
-        cards = cards.filter((c) => String(c.owner_name ?? "").toLowerCase() === name);
+        cards = cards.filter((c) => {
+          const assignee = c.assignee as Record<string, unknown> | undefined;
+          return assignee && String(assignee.name ?? "").toLowerCase() === name;
+        });
       }
     }
     if (options.staleDays) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - options.staleDays);
       cards = cards.filter((c) => {
-        const updated = parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"));
+        const updated = parseIsoTimestamp(c.lastUpdatedAt);
         return updated && updated < cutoff;
       });
     }
@@ -154,7 +195,7 @@ export class CodecksClient {
     }
 
     const stats = options.includeStats ? this.computeStats(cards) : null;
-    return { cards, stats };
+    return { cards, stats, count: cards.length };
   }
 
   async getCard(
@@ -166,49 +207,58 @@ export class CodecksClient {
     } = {},
   ): Promise<Record<string, unknown>> {
     const { includeContent = true, includeConversations = true } = options;
+    const visibility = options.archived ? "archived" : "default";
 
-    const fields: unknown[] = [
-      "id",
+    const cardFields: unknown[] = [
       "title",
       "status",
       "priority",
+      "deckId",
       "effort",
       "createdAt",
+      "milestoneId",
+      "masterTags",
       "lastUpdatedAt",
-      { assignee: ["name"] },
-      { deck: ["title"] },
-      { milestone: ["title"] },
-      { masterTags: ["name"] },
-      { childCards: ["id", "title", "status"] },
+      "isDoc",
+      "childCardInfo",
+      { assignee: ["name", "id"] },
+      { parentCard: ["title"] },
+      { childCards: ["title", "status"] },
     ];
-    if (includeContent) fields.push("content");
+    if (includeContent) cardFields.push("content");
+    if (includeConversations) {
+      cardFields.push({
+        resolvables: [
+          "context",
+          "isClosed",
+          "createdAt",
+          { creator: ["name"] },
+          { entries: ["content", "createdAt", { author: ["name"] }] },
+        ],
+      });
+    }
 
-    const result = await query({
-      card: { _args: { id: cardId }, _fields: fields },
-    });
+    const cardFilter = { cardId, visibility };
+    const q = {
+      _root: [{ account: [{ [filteredKey("cards", cardFilter)]: cardFields }] }],
+    };
 
-    const card = (result.card ?? result[cardId]) as Record<string, unknown>;
-    if (!card) throw new CliError(`[ERROR] Card not found: ${cardId}`);
-
-    return this.enrichCard(card, { includeContent, includeConversations });
+    const result = await query(q);
+    const cards = this.extractCards(result);
+    if (cards.length === 0) {
+      throw new CliError(`[ERROR] Card not found: ${cardId}`);
+    }
+    return cards[0];
   }
 
   // ---- Decks ----
 
-  async listDecks(includeCardCounts = false): Promise<Record<string, unknown>> {
-    const fields: unknown[] = ["id", "title"];
-    if (includeCardCounts) fields.push({ cards: ["id"] });
-
+  async listDecks(): Promise<Record<string, unknown>> {
     const result = await query({
-      _root: [{ account: [{ decks: fields }] }],
+      _root: [{ account: [{ decks: ["title", "id", "projectId"] }] }],
     });
     const decks = this.extractList(result, "decks");
-    return {
-      decks: decks.map((d) => ({
-        ...d,
-        card_count: Array.isArray(d.cards) ? (d.cards as unknown[]).length : undefined,
-      })),
-    };
+    return { decks };
   }
 
   // ---- Projects ----
@@ -237,7 +287,7 @@ export class CodecksClient {
 
   async listTags(): Promise<Record<string, unknown>> {
     const result = await query({
-      _root: [{ account: [{ masterTags: ["id", "name", "color"] }] }],
+      _root: [{ account: [{ masterTags: ["title", "id", "color", "emoji"] }] }],
     });
     return { tags: this.extractList(result, "masterTags") };
   }
@@ -250,16 +300,22 @@ export class CodecksClient {
         {
           account: [
             {
-              activityEntries: {
-                _args: { limit },
-                _fields: ["id", "type", "createdAt", { card: ["id", "title"] }, { user: ["name"] }],
-              },
+              activities: [
+                "type",
+                "createdAt",
+                "data",
+                { card: ["title"] },
+                { changer: ["name"] },
+                { deck: ["title"] },
+              ],
             },
           ],
         },
       ],
     });
-    return { entries: this.extractList(result, "activityEntries") };
+    let entries = this.extractList(result, "activities");
+    entries = entries.slice(0, limit);
+    return { entries, count: entries.length };
   }
 
   // ---- PM Focus ----
@@ -287,7 +343,7 @@ export class CodecksClient {
     cutoff.setDate(cutoff.getDate() - staleDays);
     const stale = cards
       .filter((c) => {
-        const updated = parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"));
+        const updated = parseIsoTimestamp(c.lastUpdatedAt);
         return updated && updated < cutoff && c.status !== "blocked";
       })
       .slice(0, limit);
@@ -327,11 +383,7 @@ export class CodecksClient {
 
     return {
       recently_done: cards
-        .filter(
-          (c) =>
-            c.status === "done" &&
-            parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"))! >= cutoff,
-        )
+        .filter((c) => c.status === "done" && parseIsoTimestamp(c.lastUpdatedAt)! >= cutoff)
         .slice(0, 10),
       in_progress: cards.filter((c) => c.status === "started").slice(0, 10),
       blocked: cards.filter((c) => c.status === "blocked").slice(0, 10),
@@ -343,35 +395,31 @@ export class CodecksClient {
 
   async listHand(): Promise<Record<string, unknown>[]> {
     const result = await query({
-      _root: [
-        {
-          account: [
-            {
-              handCards: ["id", "title", "status", "priority", { deck: ["title"] }],
-            },
-          ],
-        },
-      ],
+      _root: [{ account: [{ queueEntries: ["card", "sortIndex", "user"] }] }],
     });
-    return this.extractList(result, "handCards");
+    return this.extractList(result, "queueEntries");
   }
 
   async addToHand(cardIds: string[]): Promise<Record<string, unknown>> {
-    const results = [];
-    for (const id of cardIds) {
-      const r = await dispatch("hand-cards/add", { cardId: id });
-      results.push(r);
-    }
-    return { ok: true, added: cardIds.length };
+    const userId = config.userId;
+    if (!userId)
+      throw new CliError("[ERROR] CODECKS_USER_ID not set. Required for hand operations.");
+
+    const result = await dispatch("handQueue/setCardOrders", {
+      sessionId: crypto.randomUUID(),
+      userId,
+      cardIds,
+      draggedCardIds: cardIds,
+    });
+    return { ok: true, added: cardIds.length, result };
   }
 
   async removeFromHand(cardIds: string[]): Promise<Record<string, unknown>> {
-    const results = [];
-    for (const id of cardIds) {
-      const r = await dispatch("hand-cards/remove", { cardId: id });
-      results.push(r);
-    }
-    return { ok: true, removed: cardIds.length };
+    const result = await dispatch("handQueue/removeCards", {
+      sessionId: crypto.randomUUID(),
+      cardIds,
+    });
+    return { ok: true, removed: cardIds.length, result };
   }
 
   // ---- Mutations ----
@@ -386,16 +434,17 @@ export class CodecksClient {
     allowDuplicate?: boolean;
     parent?: string;
   }): Promise<Record<string, unknown>> {
-    const payload: Record<string, unknown> = {
-      content: `# ${options.title}${options.content ? "\n\n" + options.content : ""}`,
-    };
-    if (options.severity && options.severity !== "null") {
-      payload.severity = options.severity;
-    }
-    if (options.doc) payload.cardType = "doc";
+    const fullContent = `# ${options.title}${options.content ? "\n\n" + options.content : ""}`;
 
-    const result = await dispatch("cards/create", payload);
-    const cardId = (result.payload as Record<string, unknown>)?.id ?? result.cardId ?? "unknown";
+    const result = await reportRequest(fullContent, {
+      severity: options.severity,
+    });
+
+    const cardId = String(
+      (result as Record<string, unknown>).id ??
+        (result as Record<string, unknown>).cardId ??
+        "unknown",
+    );
 
     return { ok: true, card_id: cardId, title: options.title };
   }
@@ -415,26 +464,29 @@ export class CodecksClient {
     doc?: string;
     continueOnError?: boolean;
   }): Promise<Record<string, unknown>> {
-    const updates: Record<string, unknown> = {};
-    if (options.status) updates.status = options.status;
-    if (options.priority) {
-      updates.priority = options.priority === "null" ? null : options.priority;
-    }
-    if (options.effort) {
-      updates.effort = options.effort === "null" ? null : parseInt(options.effort, 10);
-    }
-    if (options.title) updates.title = options.title;
-    if (options.content !== undefined) updates.content = options.content;
-
     const results: Record<string, unknown>[] = [];
     let updated = 0;
 
     for (const cardId of options.cardIds) {
+      const payload: Record<string, unknown> = { id: cardId };
+      if (options.status) payload.status = options.status;
+      if (options.priority) {
+        payload.priority = options.priority === "null" ? null : options.priority;
+      }
+      if (options.effort) {
+        payload.effort = options.effort === "null" ? null : parseInt(options.effort, 10);
+      }
+      if (options.title) payload.title = options.title;
+      if (options.content !== undefined) payload.content = options.content;
+      if (options.milestone) {
+        payload.milestoneId = options.milestone === "null" ? null : options.milestone;
+      }
+      if (options.owner) {
+        payload.assigneeId = options.owner === "null" ? null : options.owner;
+      }
+
       try {
-        const r = await dispatch("cards/update", {
-          cardId,
-          update: updates,
-        });
+        const r = await dispatch("cards/update", payload);
         results.push({ card_id: cardId, ok: true, result: r });
         updated++;
       } catch (err) {
@@ -457,22 +509,28 @@ export class CodecksClient {
 
   async archiveCard(cardId: string): Promise<Record<string, unknown>> {
     const result = await dispatch("cards/update", {
-      cardId,
-      update: { visibility: "archived" },
+      id: cardId,
+      visibility: "archived",
     });
     return { ok: true, card_id: cardId, result };
   }
 
   async unarchiveCard(cardId: string): Promise<Record<string, unknown>> {
     const result = await dispatch("cards/update", {
-      cardId,
-      update: { visibility: "default" },
+      id: cardId,
+      visibility: "default",
     });
     return { ok: true, card_id: cardId, result };
   }
 
   async deleteCard(cardId: string): Promise<Record<string, unknown>> {
-    const result = await dispatch("cards/remove", { cardId });
+    // Two-step: archive first, then delete
+    await dispatch("cards/update", { id: cardId, visibility: "archived" });
+    const result = await dispatch("cards/bulkUpdate", {
+      ids: [cardId],
+      visibility: "deleted",
+      deleteFiles: false,
+    });
     return { ok: true, card_id: cardId, result };
   }
 
@@ -493,7 +551,6 @@ export class CodecksClient {
     effort?: number;
     allowDuplicate?: boolean;
   }): Promise<Record<string, unknown>> {
-    // Create hero card
     const hero = await this.createCard({
       title: options.title,
       content: options.description,
@@ -503,7 +560,6 @@ export class CodecksClient {
     const heroId = hero.card_id as string;
     const subcards: Record<string, unknown>[] = [];
 
-    // Create lane sub-cards
     const lanes = [
       { name: "Code", deck: options.codeDeck },
       { name: "Design", deck: options.designDeck },
@@ -542,22 +598,19 @@ export class CodecksClient {
     priority?: string;
     dryRun?: boolean;
   }): Promise<Record<string, unknown>> {
-    // List cards in source deck, find unsplit features
     const all = await this.listCards({ deck: options.deck });
     const cards = (all.cards ?? []) as Record<string, unknown>[];
-    const features = cards.filter(
-      (c) => !Array.isArray(c.sub_cards) || (c.sub_cards as unknown[]).length === 0,
-    );
+    const features = cards.filter((c) => {
+      const info = c.childCardInfo as Record<string, unknown> | undefined;
+      return !info || (info.count ?? 0) === 0;
+    });
 
     if (options.dryRun) {
       return {
         ok: true,
         dry_run: true,
         features_found: features.length,
-        features: features.map((f) => ({
-          id: f.id,
-          title: f.title,
-        })),
+        features: features.map((f) => ({ id: f.id, title: f.title })),
       };
     }
 
@@ -599,51 +652,75 @@ export class CodecksClient {
   // ---- Comments ----
 
   async createComment(cardId: string, message: string): Promise<Record<string, unknown>> {
-    const result = await dispatch("card-conversations/create", {
+    const userId = config.userId;
+    if (!userId) throw new CliError("[ERROR] CODECKS_USER_ID not set.");
+
+    const result = await dispatch("resolvables/create", {
       cardId,
-      message,
+      userId,
+      content: message,
+      context: "comment",
     });
     return { ok: true, card_id: cardId, result };
   }
 
   async replyComment(threadId: string, message: string): Promise<Record<string, unknown>> {
-    const result = await dispatch("card-conversation-messages/create", {
-      conversationId: threadId,
-      message,
+    const userId = config.userId;
+    if (!userId) throw new CliError("[ERROR] CODECKS_USER_ID not set.");
+
+    const result = await dispatch("resolvables/comment", {
+      resolvableId: threadId,
+      content: message,
+      authorId: userId,
     });
     return { ok: true, thread_id: threadId, result };
   }
 
   async closeComment(threadId: string, cardId: string): Promise<Record<string, unknown>> {
-    const result = await dispatch("card-conversations/resolve", {
-      conversationId: threadId,
+    const userId = config.userId;
+    if (!userId) throw new CliError("[ERROR] CODECKS_USER_ID not set.");
+
+    const result = await dispatch("resolvables/close", {
+      id: threadId,
+      isClosed: true,
       cardId,
+      closedBy: userId,
     });
     return { ok: true, thread_id: threadId, result };
   }
 
   async reopenComment(threadId: string, cardId: string): Promise<Record<string, unknown>> {
-    const result = await dispatch("card-conversations/unresolve", {
-      conversationId: threadId,
+    const result = await dispatch("resolvables/reopen", {
+      id: threadId,
+      isClosed: false,
       cardId,
     });
     return { ok: true, thread_id: threadId, result };
   }
 
   async listConversations(cardId: string): Promise<Record<string, unknown>> {
+    const cardFilter = { cardId, visibility: "default" };
     const result = await query({
-      card: {
-        _args: { id: cardId },
-        _fields: [
-          {
-            conversations: [
-              "id",
-              "status",
-              { messages: ["id", "content", "createdAt", { user: ["name"] }] },
-            ],
-          },
-        ],
-      },
+      _root: [
+        {
+          account: [
+            {
+              [filteredKey("cards", cardFilter)]: [
+                "title",
+                {
+                  resolvables: [
+                    "context",
+                    "isClosed",
+                    "createdAt",
+                    { creator: ["name"] },
+                    { entries: ["content", "createdAt", { author: ["name"] }] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
     return result;
   }
@@ -651,63 +728,34 @@ export class CodecksClient {
   // ---- Internal helpers ----
 
   private extractCards(result: Record<string, unknown>): Record<string, unknown>[] {
-    // Navigate the nested query response to find cards
-    for (const val of Object.values(result)) {
-      if (typeof val === "object" && val !== null) {
-        const obj = val as Record<string, unknown>;
-        if (Array.isArray(obj.cards)) return obj.cards as Record<string, unknown>[];
-        // Recurse one level
-        for (const inner of Object.values(obj)) {
-          if (typeof inner === "object" && inner !== null) {
-            const innerObj = inner as Record<string, unknown>;
-            if (Array.isArray(innerObj.cards)) return innerObj.cards as Record<string, unknown>[];
-          }
-        }
-      }
-    }
-    return [];
+    // Codecks returns { card: { <uuid>: {...}, <uuid>: {...} } }
+    return this.extractEntityMap(result, "card");
   }
 
-  private extractList(result: Record<string, unknown>, key: string): Record<string, unknown>[] {
-    for (const val of Object.values(result)) {
-      if (typeof val === "object" && val !== null) {
-        const obj = val as Record<string, unknown>;
-        if (Array.isArray(obj[key])) return obj[key] as Record<string, unknown>[];
-        for (const inner of Object.values(obj)) {
-          if (typeof inner === "object" && inner !== null) {
-            const innerObj = inner as Record<string, unknown>;
-            if (Array.isArray(innerObj[key])) return innerObj[key] as Record<string, unknown>[];
-          }
-        }
-      }
-    }
-    return [];
+  private extractList(
+    result: Record<string, unknown>,
+    queryKey: string,
+  ): Record<string, unknown>[] {
+    // Query key is plural (decks, milestones), response key is singular (deck, milestone)
+    // Try singular first, then plural as fallback
+    const singularKey = queryKey.replace(/s$/, "").replace(/ie$/, "y");
+    return (
+      this.extractEntityMap(result, singularKey) || this.extractEntityMap(result, queryKey) || []
+    );
   }
 
-  private enrichCard(
-    card: Record<string, unknown>,
-    _options: {
-      includeContent?: boolean;
-      includeConversations?: boolean;
-    },
-  ): Record<string, unknown> {
-    // Flatten nested relations
-    if (card.assignee && typeof card.assignee === "object") {
-      card.owner_name = (card.assignee as Record<string, unknown>).name;
+  private extractEntityMap(
+    result: Record<string, unknown>,
+    key: string,
+  ): Record<string, unknown>[] {
+    const entityMap = result[key] as Record<string, unknown> | undefined;
+    if (entityMap && typeof entityMap === "object" && !Array.isArray(entityMap)) {
+      return Object.values(entityMap).filter((v) => typeof v === "object" && v !== null) as Record<
+        string,
+        unknown
+      >[];
     }
-    if (card.deck && typeof card.deck === "object") {
-      card.deck_name = (card.deck as Record<string, unknown>).title;
-    }
-    if (card.milestone && typeof card.milestone === "object") {
-      card.milestone_name = (card.milestone as Record<string, unknown>).title;
-    }
-    if (Array.isArray(card.masterTags)) {
-      card.tags = (card.masterTags as Record<string, unknown>[]).map((t) => t.name);
-    }
-    if (Array.isArray(card.childCards)) {
-      card.sub_cards = card.childCards;
-    }
-    return card;
+    return [];
   }
 
   private computeStats(cards: Record<string, unknown>[]): Record<string, number> {

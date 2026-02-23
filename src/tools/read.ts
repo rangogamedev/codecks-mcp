@@ -199,9 +199,9 @@ export function registerReadTools(server: McpServer, client: CodecksClient): voi
         include_card_counts: z.boolean().default(false),
       }),
     },
-    async (args) => {
+    async (_args) => {
       try {
-        const result = await client.listDecks(args.include_card_counts);
+        const result = await client.listDecks();
         return {
           content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
