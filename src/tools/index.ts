@@ -14,10 +14,7 @@ import { registerFeedbackTools } from "./feedback.js";
 import { registerPlanningTools } from "./planning.js";
 import { registerRegistryTools } from "./registry.js";
 
-export function registerAllTools(
-  server: McpServer,
-  client: CodecksClient,
-): void {
+export function registerAllTools(server: McpServer, client: CodecksClient): void {
   registerReadTools(server, client);
   registerHandTools(server, client);
   registerMutationTools(server, client);

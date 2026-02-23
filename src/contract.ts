@@ -18,10 +18,7 @@ export interface ContractError {
   [key: string]: unknown;
 }
 
-export function contractError(
-  message: string,
-  errorType = "error",
-): ContractError {
+export function contractError(message: string, errorType = "error"): ContractError {
   return {
     ok: false,
     schema_version: CONTRACT_SCHEMA_VERSION,
@@ -34,9 +31,7 @@ export function contractError(
   };
 }
 
-export function ensureContractDict(
-  payload: Record<string, unknown>,
-): Record<string, unknown> {
+export function ensureContractDict(payload: Record<string, unknown>): Record<string, unknown> {
   const out = { ...payload };
   out.schema_version ??= CONTRACT_SCHEMA_VERSION;
 

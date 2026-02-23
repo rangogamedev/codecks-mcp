@@ -19,25 +19,17 @@ const INJECTION_PATTERNS: Array<[RegExp, string]> = [
     /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)/i,
     "override directive",
   ],
-  [
-    /forget\s+(your|all|the)\s+(rules|instructions|training|guidelines)/i,
-    "forget directive",
-  ],
+  [/forget\s+(your|all|the)\s+(rules|instructions|training|guidelines)/i, "forget directive"],
   [
     /you\s+are\s+now\s+(in\s+)?(admin|root|debug|developer|unrestricted|jailbreak)/i,
     "mode switching",
   ],
-  [
-    /(execute|call|invoke|run)\s+the\s+(tool|function|command)/i,
-    "tool invocation directive",
-  ],
+  [/(execute|call|invoke|run)\s+the\s+(tool|function|command)/i, "tool invocation directive"],
 ];
 
 export function checkInjection(text: string): string[] {
   if (text.length < 10) return [];
-  return INJECTION_PATTERNS.filter(([pattern]) => pattern.test(text)).map(
-    ([, desc]) => desc,
-  );
+  return INJECTION_PATTERNS.filter(([pattern]) => pattern.test(text)).map(([, desc]) => desc);
 }
 
 // ---------------------------------------------------------------------------
@@ -49,17 +41,9 @@ export function tagUserText(text: string | null | undefined): string | null {
   return `[USER_DATA]${text}[/USER_DATA]`;
 }
 
-const USER_TEXT_FIELDS = new Set([
-  "title",
-  "content",
-  "deck_name",
-  "owner_name",
-  "milestone_name",
-]);
+const USER_TEXT_FIELDS = new Set(["title", "content", "deck_name", "owner_name", "milestone_name"]);
 
-export function sanitizeCard(
-  card: Record<string, unknown>,
-): Record<string, unknown> {
+export function sanitizeCard(card: Record<string, unknown>): Record<string, unknown> {
   const out = { ...card };
   const warnings: string[] = [];
 
@@ -86,26 +70,22 @@ export function sanitizeCard(
   }
 
   if (Array.isArray(out.conversations)) {
-    out.conversations = (out.conversations as Record<string, unknown>[]).map(
-      (conv) => {
-        const tagged = { ...conv };
-        if (Array.isArray(tagged.messages)) {
-          tagged.messages = (tagged.messages as Record<string, unknown>[]).map(
-            (msg) => {
-              const m = { ...msg };
-              if (typeof m.content === "string") {
-                for (const desc of checkInjection(m.content as string)) {
-                  warnings.push(`conversation.message: ${desc}`);
-                }
-                m.content = tagUserText(m.content as string);
-              }
-              return m;
-            },
-          );
-        }
-        return tagged;
-      },
-    );
+    out.conversations = (out.conversations as Record<string, unknown>[]).map((conv) => {
+      const tagged = { ...conv };
+      if (Array.isArray(tagged.messages)) {
+        tagged.messages = (tagged.messages as Record<string, unknown>[]).map((msg) => {
+          const m = { ...msg };
+          if (typeof m.content === "string") {
+            for (const desc of checkInjection(m.content as string)) {
+              warnings.push(`conversation.message: ${desc}`);
+            }
+            m.content = tagUserText(m.content as string);
+          }
+          return m;
+        });
+      }
+      return tagged;
+    });
   }
 
   if (warnings.length > 0) {
@@ -115,9 +95,7 @@ export function sanitizeCard(
   return out;
 }
 
-export function sanitizeActivity(
-  data: Record<string, unknown>,
-): Record<string, unknown> {
+export function sanitizeActivity(data: Record<string, unknown>): Record<string, unknown> {
   const out = { ...data };
   if (out.cards && typeof out.cards === "object" && !Array.isArray(out.cards)) {
     const cards = out.cards as Record<string, Record<string, unknown>>;
@@ -134,9 +112,7 @@ export function sanitizeActivity(
   return out;
 }
 
-export function sanitizeConversations(
-  data: Record<string, unknown>,
-): Record<string, unknown> {
+export function sanitizeConversations(data: Record<string, unknown>): Record<string, unknown> {
   const out = { ...data };
   for (const [key, val] of Object.entries(out)) {
     if (Array.isArray(val)) {
@@ -189,19 +165,13 @@ export function validateInput(text: string, field: string): string {
   const cleaned = text.replace(CONTROL_RE, "");
   const limit = INPUT_LIMITS[field] ?? 50_000;
   if (cleaned.length > limit) {
-    throw new CliError(
-      `[ERROR] ${field} exceeds maximum length of ${limit} characters`,
-    );
+    throw new CliError(`[ERROR] ${field} exceeds maximum length of ${limit} characters`);
   }
   return cleaned;
 }
 
 export function validateUuid(value: string, field = "card_id"): string {
-  if (
-    typeof value !== "string" ||
-    value.length !== 36 ||
-    (value.match(/-/g) ?? []).length !== 4
-  ) {
+  if (typeof value !== "string" || value.length !== 36 || (value.match(/-/g) ?? []).length !== 4) {
     throw new CliError(
       `[ERROR] ${field} must be a full 36-char UUID, got: ${JSON.stringify(value)}`,
     );
@@ -209,9 +179,6 @@ export function validateUuid(value: string, field = "card_id"): string {
   return value;
 }
 
-export function validateUuidList(
-  values: string[],
-  field = "card_ids",
-): string[] {
+export function validateUuidList(values: string[], field = "card_ids"): string[] {
   return values.map((v) => validateUuid(v, field));
 }

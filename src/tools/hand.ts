@@ -36,16 +36,12 @@ function slimCard(card: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export function registerHandTools(
-  server: McpServer,
-  client: CodecksClient,
-): void {
+export function registerHandTools(server: McpServer, client: CodecksClient): void {
   server.registerTool(
     "list_hand",
     {
       title: "List Hand",
-      description:
-        "List cards in the user's hand (personal work queue), sorted by hand order.",
+      description: "List cards in the user's hand (personal work queue), sorted by hand order.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -87,9 +83,7 @@ export function registerHandTools(
         validateUuidList(args.card_ids);
         const result = await client.addToHand(args.card_ids);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -118,9 +112,7 @@ export function registerHandTools(
         validateUuidList(args.card_ids);
         const result = await client.removeFromHand(args.card_ids);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {

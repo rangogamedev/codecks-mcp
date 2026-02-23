@@ -15,10 +15,7 @@ function handleError(err: unknown): Record<string, unknown> {
   return contractError(`Unexpected error: ${err}`, "error");
 }
 
-export function registerMutationTools(
-  server: McpServer,
-  client: CodecksClient,
-): void {
+export function registerMutationTools(server: McpServer, client: CodecksClient): void {
   server.registerTool(
     "create_card",
     {
@@ -27,27 +24,19 @@ export function registerMutationTools(
         "Create a new card. Set deck/project to place it. Use parent to nest as sub-card.",
       inputSchema: z.object({
         title: z.string().describe("Card title (max 500 chars)"),
-        content: z
-          .string()
-          .optional()
-          .describe("Card body. Use '- []' for checkboxes"),
+        content: z.string().optional().describe("Card body. Use '- []' for checkboxes"),
         deck: z.string().optional().describe("Destination deck name"),
         project: z.string().optional(),
         severity: z.enum(["critical", "high", "low", "null"]).optional(),
         doc: z.boolean().default(false).describe("True for doc card"),
         allow_duplicate: z.boolean().default(false),
-        parent: z
-          .string()
-          .optional()
-          .describe("Parent card UUID for sub-cards"),
+        parent: z.string().optional().describe("Parent card UUID for sub-cards"),
       }),
     },
     async (args) => {
       try {
         const title = validateInput(args.title, "title");
-        const content = args.content
-          ? validateInput(args.content, "content")
-          : undefined;
+        const content = args.content ? validateInput(args.content, "content") : undefined;
         const result = await client.createCard({
           title,
           content,
@@ -59,9 +48,7 @@ export function registerMutationTools(
           parent: args.parent,
         });
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -84,27 +71,16 @@ export function registerMutationTools(
         "Update card properties. Doc cards: only owner/tags/milestone/deck/title/content/hero.",
       inputSchema: z.object({
         card_ids: z.array(z.string()).describe("Full 36-char UUIDs"),
-        status: z
-          .enum(["not_started", "started", "done", "blocked", "in_review"])
-          .optional(),
+        status: z.enum(["not_started", "started", "done", "blocked", "in_review"]).optional(),
         priority: z.enum(["a", "b", "c", "null"]).optional(),
-        effort: z
-          .string()
-          .optional()
-          .describe("Integer string, or 'null' to clear"),
+        effort: z.string().optional().describe("Integer string, or 'null' to clear"),
         deck: z.string().optional(),
         title: z.string().optional().describe("Single card only"),
         content: z.string().optional(),
         milestone: z.string().optional().describe("Name, or 'none' to clear"),
-        hero: z
-          .string()
-          .optional()
-          .describe("Parent card UUID, or 'none' to detach"),
+        hero: z.string().optional().describe("Parent card UUID, or 'none' to detach"),
         owner: z.string().optional().describe("Name, or 'none' to unassign"),
-        tags: z
-          .string()
-          .optional()
-          .describe("Comma-separated, or 'none' to clear"),
+        tags: z.string().optional().describe("Comma-separated, or 'none' to clear"),
         doc: z.enum(["true", "false"]).optional(),
         continue_on_error: z.boolean().default(false),
       }),
@@ -130,9 +106,7 @@ export function registerMutationTools(
           continueOnError: args.continue_on_error,
         });
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -161,9 +135,7 @@ export function registerMutationTools(
         validateUuidList(args.card_ids);
         const result = await client.markDone(args.card_ids);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -192,9 +164,7 @@ export function registerMutationTools(
         validateUuidList(args.card_ids);
         const result = await client.markStarted(args.card_ids);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -223,9 +193,7 @@ export function registerMutationTools(
         validateUuid(args.card_id);
         const result = await client.archiveCard(args.card_id);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -254,9 +222,7 @@ export function registerMutationTools(
         validateUuid(args.card_id);
         const result = await client.unarchiveCard(args.card_id);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -286,9 +252,7 @@ export function registerMutationTools(
         validateUuid(args.card_id);
         const result = await client.deleteCard(args.card_id);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -313,15 +277,9 @@ export function registerMutationTools(
         hero_deck: z.string(),
         code_deck: z.string(),
         design_deck: z.string(),
-        art_deck: z
-          .string()
-          .optional()
-          .describe("Required unless skip_art=true"),
+        art_deck: z.string().optional().describe("Required unless skip_art=true"),
         skip_art: z.boolean().default(false),
-        audio_deck: z
-          .string()
-          .optional()
-          .describe("Required unless skip_audio=true"),
+        audio_deck: z.string().optional().describe("Required unless skip_audio=true"),
         skip_audio: z.boolean().default(false),
         description: z.string().optional(),
         owner: z.string().optional(),
@@ -352,9 +310,7 @@ export function registerMutationTools(
           allowDuplicate: args.allow_duplicate,
         });
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -401,9 +357,7 @@ export function registerMutationTools(
           dryRun: args.dry_run,
         });
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {

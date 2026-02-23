@@ -97,11 +97,7 @@ const LANES: LaneDefinition[] = [
     displayName: "Code",
     required: true,
     keywords: ["programming", "implementation", "backend", "frontend"],
-    defaultChecklist: [
-      "- [] Implementation",
-      "- [] Unit tests",
-      "- [] Code review",
-    ],
+    defaultChecklist: ["- [] Implementation", "- [] Unit tests", "- [] Code review"],
     tags: ["code"],
     cliHelp: "Destination deck for Code sub-cards",
   },
@@ -110,11 +106,7 @@ const LANES: LaneDefinition[] = [
     displayName: "Design",
     required: true,
     keywords: ["ui", "ux", "wireframe", "mockup", "layout"],
-    defaultChecklist: [
-      "- [] Wireframes",
-      "- [] Visual design",
-      "- [] Design review",
-    ],
+    defaultChecklist: ["- [] Wireframes", "- [] Visual design", "- [] Design review"],
     tags: ["design"],
     cliHelp: "Destination deck for Design sub-cards",
   },
@@ -123,11 +115,7 @@ const LANES: LaneDefinition[] = [
     displayName: "Art",
     required: false,
     keywords: ["sprite", "texture", "model", "animation", "illustration"],
-    defaultChecklist: [
-      "- [] Concept art",
-      "- [] Asset creation",
-      "- [] Art review",
-    ],
+    defaultChecklist: ["- [] Concept art", "- [] Asset creation", "- [] Art review"],
     tags: ["art"],
     cliHelp: "Destination deck for Art sub-cards (optional)",
   },
@@ -136,11 +124,7 @@ const LANES: LaneDefinition[] = [
     displayName: "Audio",
     required: false,
     keywords: ["sound", "music", "sfx", "voice"],
-    defaultChecklist: [
-      "- [] Sound design",
-      "- [] Implementation",
-      "- [] Audio review",
-    ],
+    defaultChecklist: ["- [] Sound design", "- [] Implementation", "- [] Audio review"],
     tags: ["audio"],
     cliHelp: "Destination deck for Audio sub-cards (optional)",
   },
@@ -199,13 +183,9 @@ export function registerRegistryTools(server: McpServer): void {
     "get_lane_registry",
     {
       title: "Get Lane Registry",
-      description:
-        "Get the local lane (deck category) definitions and metadata. No auth needed.",
+      description: "Get the local lane (deck category) definitions and metadata. No auth needed.",
       inputSchema: z.object({
-        required_only: z
-          .boolean()
-          .default(false)
-          .describe("If true, return only required lanes"),
+        required_only: z.boolean().default(false).describe("If true, return only required lanes"),
       }),
     },
     async (args) => {
@@ -232,12 +212,8 @@ export function registerRegistryTools(server: McpServer): void {
               finalizeToolResult({
                 lanes: laneDicts,
                 count: laneDicts.length,
-                required_lanes: LANES.filter((l) => l.required).map(
-                  (l) => l.name,
-                ),
-                optional_lanes: LANES.filter((l) => !l.required).map(
-                  (l) => l.name,
-                ),
+                required_lanes: LANES.filter((l) => l.required).map((l) => l.name),
+                optional_lanes: LANES.filter((l) => !l.required).map((l) => l.name),
               }),
             ),
           },

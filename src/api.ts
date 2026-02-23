@@ -77,9 +77,7 @@ async function httpRequest(
       try {
         return JSON.parse(raw);
       } catch {
-        throw new CliError(
-          "[ERROR] Unexpected response from Codecks API (not valid JSON).",
-        );
+        throw new CliError("[ERROR] Unexpected response from Codecks API (not valid JSON).");
       }
     } catch (err) {
       clearTimeout(timer);
@@ -162,9 +160,7 @@ export async function reportRequest(
   options: { severity?: string; email?: string } = {},
 ): Promise<Record<string, unknown>> {
   if (!config.reportToken) {
-    throw new CliError(
-      "[ERROR] CODECKS_REPORT_TOKEN not set. Generate one via the CLI.",
-    );
+    throw new CliError("[ERROR] CODECKS_REPORT_TOKEN not set. Generate one via the CLI.");
   }
 
   const payload: Record<string, string> = { content };
@@ -179,9 +175,7 @@ export async function reportRequest(
     return expectObject(result, "report");
   } catch (err) {
     if (err instanceof HTTPError && err.code === 401) {
-      throw new CliError(
-        "[ERROR] Report token is invalid or disabled. Generate a new one.",
-      );
+      throw new CliError("[ERROR] Report token is invalid or disabled. Generate a new one.");
     }
     throw err;
   }
@@ -191,18 +185,13 @@ export async function reportRequest(
 // Query and dispatch helpers
 // ---------------------------------------------------------------------------
 
-export async function query(
-  q: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+export async function query(q: Record<string, unknown>): Promise<Record<string, unknown>> {
   const result = await sessionRequest("/", { query: q }, { idempotent: true });
   delete result._root;
   return result;
 }
 
-export async function dispatch(
-  path: string,
-  data: unknown,
-): Promise<Record<string, unknown>> {
+export async function dispatch(path: string, data: unknown): Promise<Record<string, unknown>> {
   return sessionRequest(`/dispatch/${path}`, data);
 }
 
@@ -210,14 +199,9 @@ export async function dispatch(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function expectObject(
-  result: unknown,
-  operation: string,
-): Record<string, unknown> {
+function expectObject(result: unknown, operation: string): Record<string, unknown> {
   if (result !== null && typeof result === "object" && !Array.isArray(result)) {
     return result as Record<string, unknown>;
   }
-  throw new CliError(
-    `[ERROR] Unexpected ${operation} response shape: expected JSON object.`,
-  );
+  throw new CliError(`[ERROR] Unexpected ${operation} response shape: expected JSON object.`);
 }

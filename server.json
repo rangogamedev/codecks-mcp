@@ -75,6 +75,12 @@
     { "name": "get_workflow_preferences", "description": "Load preferences" },
     { "name": "save_workflow_preferences", "description": "Save preferences" },
     { "name": "save_cli_feedback", "description": "Save feedback item" },
-    { "name": "get_cli_feedback", "description": "Read feedback items" }
+    { "name": "get_cli_feedback", "description": "Read feedback items" },
+    { "name": "planning_init", "description": "Create planning files" },
+    { "name": "planning_status", "description": "Get planning status" },
+    { "name": "planning_update", "description": "Update planning files" },
+    { "name": "planning_measure", "description": "Measure planning token usage" },
+    { "name": "get_tag_registry", "description": "Get tag taxonomy" },
+    { "name": "get_lane_registry", "description": "Get lane definitions" }
   ]
 }

@@ -130,18 +130,14 @@ export class CodecksClient {
         cards = cards.filter((c) => !c.owner_name);
       } else {
         const name = options.owner.toLowerCase();
-        cards = cards.filter(
-          (c) => String(c.owner_name ?? "").toLowerCase() === name,
-        );
+        cards = cards.filter((c) => String(c.owner_name ?? "").toLowerCase() === name);
       }
     }
     if (options.staleDays) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - options.staleDays);
       cards = cards.filter((c) => {
-        const updated = parseIsoTimestamp(
-          getField(c, "last_updated_at", "lastUpdatedAt"),
-        );
+        const updated = parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"));
         return updated && updated < cutoff;
       });
     }
@@ -210,9 +206,7 @@ export class CodecksClient {
     return {
       decks: decks.map((d) => ({
         ...d,
-        card_count: Array.isArray(d.cards)
-          ? (d.cards as unknown[]).length
-          : undefined,
+        card_count: Array.isArray(d.cards) ? (d.cards as unknown[]).length : undefined,
       })),
     };
   }
@@ -258,13 +252,7 @@ export class CodecksClient {
             {
               activityEntries: {
                 _args: { limit },
-                _fields: [
-                  "id",
-                  "type",
-                  "createdAt",
-                  { card: ["id", "title"] },
-                  { user: ["name"] },
-                ],
+                _fields: ["id", "type", "createdAt", { card: ["id", "title"] }, { user: ["name"] }],
               },
             },
           ],
@@ -293,17 +281,13 @@ export class CodecksClient {
     const cards = (all.cards ?? []) as Record<string, unknown>[];
 
     const blocked = cards.filter((c) => c.status === "blocked").slice(0, limit);
-    const inReview = cards
-      .filter((c) => c.status === "in_review")
-      .slice(0, limit);
+    const inReview = cards.filter((c) => c.status === "in_review").slice(0, limit);
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - staleDays);
     const stale = cards
       .filter((c) => {
-        const updated = parseIsoTimestamp(
-          getField(c, "last_updated_at", "lastUpdatedAt"),
-        );
+        const updated = parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"));
         return updated && updated < cutoff && c.status !== "blocked";
       })
       .slice(0, limit);
@@ -318,9 +302,7 @@ export class CodecksClient {
       blocked,
       in_review: inReview,
       stale,
-      suggested: cards
-        .filter((c) => c.status === "not_started")
-        .slice(0, limit),
+      suggested: cards.filter((c) => c.status === "not_started").slice(0, limit),
     };
   }
 
@@ -348,9 +330,7 @@ export class CodecksClient {
         .filter(
           (c) =>
             c.status === "done" &&
-            parseIsoTimestamp(
-              getField(c, "last_updated_at", "lastUpdatedAt"),
-            )! >= cutoff,
+            parseIsoTimestamp(getField(c, "last_updated_at", "lastUpdatedAt"))! >= cutoff,
         )
         .slice(0, 10),
       in_progress: cards.filter((c) => c.status === "started").slice(0, 10),
@@ -367,13 +347,7 @@ export class CodecksClient {
         {
           account: [
             {
-              handCards: [
-                "id",
-                "title",
-                "status",
-                "priority",
-                { deck: ["title"] },
-              ],
+              handCards: ["id", "title", "status", "priority", { deck: ["title"] }],
             },
           ],
         },
@@ -421,10 +395,7 @@ export class CodecksClient {
     if (options.doc) payload.cardType = "doc";
 
     const result = await dispatch("cards/create", payload);
-    const cardId =
-      (result.payload as Record<string, unknown>)?.id ??
-      result.cardId ??
-      "unknown";
+    const cardId = (result.payload as Record<string, unknown>)?.id ?? result.cardId ?? "unknown";
 
     return { ok: true, card_id: cardId, title: options.title };
   }
@@ -450,8 +421,7 @@ export class CodecksClient {
       updates.priority = options.priority === "null" ? null : options.priority;
     }
     if (options.effort) {
-      updates.effort =
-        options.effort === "null" ? null : parseInt(options.effort, 10);
+      updates.effort = options.effort === "null" ? null : parseInt(options.effort, 10);
     }
     if (options.title) updates.title = options.title;
     if (options.content !== undefined) updates.content = options.content;
@@ -576,8 +546,7 @@ export class CodecksClient {
     const all = await this.listCards({ deck: options.deck });
     const cards = (all.cards ?? []) as Record<string, unknown>[];
     const features = cards.filter(
-      (c) =>
-        !Array.isArray(c.sub_cards) || (c.sub_cards as unknown[]).length === 0,
+      (c) => !Array.isArray(c.sub_cards) || (c.sub_cards as unknown[]).length === 0,
     );
 
     if (options.dryRun) {
@@ -629,10 +598,7 @@ export class CodecksClient {
 
   // ---- Comments ----
 
-  async createComment(
-    cardId: string,
-    message: string,
-  ): Promise<Record<string, unknown>> {
+  async createComment(cardId: string, message: string): Promise<Record<string, unknown>> {
     const result = await dispatch("card-conversations/create", {
       cardId,
       message,
@@ -640,10 +606,7 @@ export class CodecksClient {
     return { ok: true, card_id: cardId, result };
   }
 
-  async replyComment(
-    threadId: string,
-    message: string,
-  ): Promise<Record<string, unknown>> {
+  async replyComment(threadId: string, message: string): Promise<Record<string, unknown>> {
     const result = await dispatch("card-conversation-messages/create", {
       conversationId: threadId,
       message,
@@ -651,10 +614,7 @@ export class CodecksClient {
     return { ok: true, thread_id: threadId, result };
   }
 
-  async closeComment(
-    threadId: string,
-    cardId: string,
-  ): Promise<Record<string, unknown>> {
+  async closeComment(threadId: string, cardId: string): Promise<Record<string, unknown>> {
     const result = await dispatch("card-conversations/resolve", {
       conversationId: threadId,
       cardId,
@@ -662,10 +622,7 @@ export class CodecksClient {
     return { ok: true, thread_id: threadId, result };
   }
 
-  async reopenComment(
-    threadId: string,
-    cardId: string,
-  ): Promise<Record<string, unknown>> {
+  async reopenComment(threadId: string, cardId: string): Promise<Record<string, unknown>> {
     const result = await dispatch("card-conversations/unresolve", {
       conversationId: threadId,
       cardId,
@@ -693,21 +650,17 @@ export class CodecksClient {
 
   // ---- Internal helpers ----
 
-  private extractCards(
-    result: Record<string, unknown>,
-  ): Record<string, unknown>[] {
+  private extractCards(result: Record<string, unknown>): Record<string, unknown>[] {
     // Navigate the nested query response to find cards
     for (const val of Object.values(result)) {
       if (typeof val === "object" && val !== null) {
         const obj = val as Record<string, unknown>;
-        if (Array.isArray(obj.cards))
-          return obj.cards as Record<string, unknown>[];
+        if (Array.isArray(obj.cards)) return obj.cards as Record<string, unknown>[];
         // Recurse one level
         for (const inner of Object.values(obj)) {
           if (typeof inner === "object" && inner !== null) {
             const innerObj = inner as Record<string, unknown>;
-            if (Array.isArray(innerObj.cards))
-              return innerObj.cards as Record<string, unknown>[];
+            if (Array.isArray(innerObj.cards)) return innerObj.cards as Record<string, unknown>[];
           }
         }
       }
@@ -715,20 +668,15 @@ export class CodecksClient {
     return [];
   }
 
-  private extractList(
-    result: Record<string, unknown>,
-    key: string,
-  ): Record<string, unknown>[] {
+  private extractList(result: Record<string, unknown>, key: string): Record<string, unknown>[] {
     for (const val of Object.values(result)) {
       if (typeof val === "object" && val !== null) {
         const obj = val as Record<string, unknown>;
-        if (Array.isArray(obj[key]))
-          return obj[key] as Record<string, unknown>[];
+        if (Array.isArray(obj[key])) return obj[key] as Record<string, unknown>[];
         for (const inner of Object.values(obj)) {
           if (typeof inner === "object" && inner !== null) {
             const innerObj = inner as Record<string, unknown>;
-            if (Array.isArray(innerObj[key]))
-              return innerObj[key] as Record<string, unknown>[];
+            if (Array.isArray(innerObj[key])) return innerObj[key] as Record<string, unknown>[];
           }
         }
       }
@@ -754,9 +702,7 @@ export class CodecksClient {
       card.milestone_name = (card.milestone as Record<string, unknown>).title;
     }
     if (Array.isArray(card.masterTags)) {
-      card.tags = (card.masterTags as Record<string, unknown>[]).map(
-        (t) => t.name,
-      );
+      card.tags = (card.masterTags as Record<string, unknown>[]).map((t) => t.name);
     }
     if (Array.isArray(card.childCards)) {
       card.sub_cards = card.childCards;
@@ -764,9 +710,7 @@ export class CodecksClient {
     return card;
   }
 
-  private computeStats(
-    cards: Record<string, unknown>[],
-  ): Record<string, number> {
+  private computeStats(cards: Record<string, unknown>[]): Record<string, number> {
     const stats: Record<string, number> = {};
     for (const card of cards) {
       const status = String(card.status ?? "unknown");

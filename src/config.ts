@@ -61,13 +61,7 @@ export const CONTRACT_SCHEMA_VERSION = "1.0";
 
 export const BASE_URL = "https://api.codecks.io";
 
-export const VALID_STATUSES = new Set([
-  "not_started",
-  "started",
-  "done",
-  "blocked",
-  "in_review",
-]);
+export const VALID_STATUSES = new Set(["not_started", "started", "done", "blocked", "in_review"]);
 export const VALID_PRIORITIES = new Set(["a", "b", "c", "null"]);
 export const VALID_SORT_FIELDS = new Set([
   "status",

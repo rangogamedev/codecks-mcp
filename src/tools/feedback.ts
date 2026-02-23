@@ -23,33 +23,18 @@ export function registerFeedbackTools(server: McpServer): void {
     "save_cli_feedback",
     {
       title: "Save CLI Feedback",
-      description:
-        "Save a CLI feedback item for the development team. No auth needed.",
+      description: "Save a CLI feedback item for the development team. No auth needed.",
       inputSchema: z.object({
-        category: z.enum([
-          "missing_feature",
-          "bug",
-          "error",
-          "improvement",
-          "usability",
-        ]),
+        category: z.enum(["missing_feature", "bug", "error", "improvement", "usability"]),
         message: z.string().describe("Feedback message (max 1000 chars)"),
-        tool_name: z
-          .string()
-          .optional()
-          .describe("Which MCP tool this relates to"),
-        context: z
-          .string()
-          .optional()
-          .describe("Brief session context (max 500 chars)"),
+        tool_name: z.string().optional().describe("Which MCP tool this relates to"),
+        context: z.string().optional().describe("Brief session context (max 500 chars)"),
       }),
     },
     async (args) => {
       try {
         const message = validateInput(args.message, "feedback_message");
-        const context = args.context
-          ? validateInput(args.context, "feedback_context")
-          : undefined;
+        const context = args.context ? validateInput(args.context, "feedback_context") : undefined;
 
         const item: Record<string, unknown> = {
           timestamp: new Date().toISOString(),
@@ -74,11 +59,7 @@ export function registerFeedbackTools(server: McpServer): void {
 
         writeFileSync(
           FEEDBACK_PATH,
-          JSON.stringify(
-            { items, updated_at: new Date().toISOString() },
-            null,
-            2,
-          ),
+          JSON.stringify({ items, updated_at: new Date().toISOString() }, null, 2),
           "utf-8",
         );
 
@@ -86,9 +67,7 @@ export function registerFeedbackTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: JSON.stringify(
-                finalizeToolResult({ saved: true, total_items: items.length }),
-              ),
+              text: JSON.stringify(finalizeToolResult({ saved: true, total_items: items.length })),
             },
           ],
         };
@@ -109,8 +88,7 @@ export function registerFeedbackTools(server: McpServer): void {
     "get_cli_feedback",
     {
       title: "Get CLI Feedback",
-      description:
-        "Read saved CLI feedback items. Optionally filter by category. No auth needed.",
+      description: "Read saved CLI feedback items. Optionally filter by category. No auth needed.",
       inputSchema: z.object({
         category: z
           .enum(["missing_feature", "bug", "error", "improvement", "usability"])
@@ -124,9 +102,7 @@ export function registerFeedbackTools(server: McpServer): void {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(
-                  finalizeToolResult({ found: false, items: [], count: 0 }),
-                ),
+                text: JSON.stringify(finalizeToolResult({ found: false, items: [], count: 0 })),
               },
             ],
           };

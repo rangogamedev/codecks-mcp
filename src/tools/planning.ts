@@ -4,12 +4,7 @@
  */
 
 import { z } from "zod";
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  appendFileSync,
-} from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { contractError, finalizeToolResult } from "../contract.js";
@@ -164,10 +159,7 @@ export function registerPlanningTools(server: McpServer): void {
       description:
         "Create lean planning files (task_plan.md, findings.md, progress.md) in project root. No auth needed.",
       inputSchema: z.object({
-        force: z
-          .boolean()
-          .default(false)
-          .describe("Overwrite existing files (default false)"),
+        force: z.boolean().default(false).describe("Overwrite existing files (default false)"),
       }),
     },
     async (args) => {
@@ -195,9 +187,7 @@ export function registerPlanningTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: JSON.stringify(
-                finalizeToolResult({ ok: true, created, skipped }),
-              ),
+              text: JSON.stringify(finalizeToolResult({ ok: true, created, skipped })),
             },
           ],
         };
@@ -245,8 +235,7 @@ export function registerPlanningTools(server: McpServer): void {
         const goalMatch = content.match(/## Goal\n(.+)/);
         const phaseMatch = content.match(/## Current Phase\n(.+)/);
         const phases: Array<{ name: string; status: string }> = [];
-        const phaseRegex =
-          /### Phase (\d+): (.+)\n[\s\S]*?- \*\*Status:\*\* (\w+)/g;
+        const phaseRegex = /### Phase (\d+): (.+)\n[\s\S]*?- \*\*Status:\*\* (\w+)/g;
         let m;
         while ((m = phaseRegex.exec(content)) !== null) {
           phases.push({ name: `Phase ${m[1]}: ${m[2]}`, status: m[3] });
@@ -329,9 +318,7 @@ export function registerPlanningTools(server: McpServer): void {
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify(
-                    finalizeToolResult({ ok: true, operation: "goal", text }),
-                  ),
+                  text: JSON.stringify(finalizeToolResult({ ok: true, operation: "goal", text })),
                 },
               ],
             };
@@ -345,9 +332,7 @@ export function registerPlanningTools(server: McpServer): void {
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify(
-                    finalizeToolResult({ ok: true, operation: "log", text }),
-                  ),
+                  text: JSON.stringify(finalizeToolResult({ ok: true, operation: "log", text })),
                 },
               ],
             };
@@ -366,9 +351,7 @@ export function registerPlanningTools(server: McpServer): void {
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify(
-                    finalizeToolResult({ ok: true, operation: "error", text }),
-                  ),
+                  text: JSON.stringify(finalizeToolResult({ ok: true, operation: "error", text })),
                 },
               ],
             };
@@ -405,10 +388,7 @@ export function registerPlanningTools(server: McpServer): void {
             const path = planPath(FINDINGS_FILE);
             const section = args.section ?? "Research Findings";
             let content = readFileSync(path, "utf-8");
-            content = content.replace(
-              new RegExp(`(## ${section}\n)`),
-              `$1- ${text}\n`,
-            );
+            content = content.replace(new RegExp(`(## ${section}\n)`), `$1- ${text}\n`);
             writeFileSync(path, content, "utf-8");
             return {
               content: [
@@ -468,8 +448,7 @@ export function registerPlanningTools(server: McpServer): void {
     async (args) => {
       try {
         const files = [PLAN_FILE, FINDINGS_FILE, PROGRESS_FILE];
-        const measurements: Record<string, { chars: number; tokens: number }> =
-          {};
+        const measurements: Record<string, { chars: number; tokens: number }> = {};
         let totalChars = 0;
 
         for (const file of files) {

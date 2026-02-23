@@ -3,11 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  contractError,
-  ensureContractDict,
-  finalizeToolResult,
-} from "../src/contract.js";
+import { contractError, ensureContractDict, finalizeToolResult } from "../src/contract.js";
 
 describe("contractError", () => {
   it("creates error envelope with defaults", () => {

@@ -46,8 +46,7 @@ export function registerPmTools(server: McpServer): void {
     "get_workflow_preferences",
     {
       title: "Get Workflow Preferences",
-      description:
-        "Load user workflow preferences from past sessions. No auth needed.",
+      description: "Load user workflow preferences from past sessions. No auth needed.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -57,25 +56,19 @@ export function registerPmTools(server: McpServer): void {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(
-                  finalizeToolResult({ found: false, preferences: [] }),
-                ),
+                text: JSON.stringify(finalizeToolResult({ found: false, preferences: [] })),
               },
             ],
           };
         }
         const data = JSON.parse(readFileSync(PREFS_PATH, "utf-8"));
         const raw = data.observations ?? [];
-        const prefs = raw.map((p: unknown) =>
-          typeof p === "string" ? tagUserText(p) : p,
-        );
+        const prefs = raw.map((p: unknown) => (typeof p === "string" ? tagUserText(p) : p));
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify(
-                finalizeToolResult({ found: true, preferences: prefs }),
-              ),
+              text: JSON.stringify(finalizeToolResult({ found: true, preferences: prefs })),
             },
           ],
         };
@@ -96,14 +89,11 @@ export function registerPmTools(server: McpServer): void {
     "save_workflow_preferences",
     {
       title: "Save Workflow Preferences",
-      description:
-        "Save observed workflow patterns from current session. No auth needed.",
+      description: "Save observed workflow patterns from current session. No auth needed.",
       inputSchema: z.object({
         observations: z
           .array(z.string())
-          .describe(
-            "Workflow patterns observed (max 50 items, 500 chars each)",
-          ),
+          .describe("Workflow patterns observed (max 50 items, 500 chars each)"),
       }),
     },
     async (args) => {
@@ -120,9 +110,7 @@ export function registerPmTools(server: McpServer): void {
           content: [
             {
               type: "text",
-              text: JSON.stringify(
-                finalizeToolResult({ saved: validated.length }),
-              ),
+              text: JSON.stringify(finalizeToolResult({ saved: validated.length })),
             },
           ],
         };

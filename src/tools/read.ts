@@ -37,10 +37,7 @@ function handleError(err: unknown): Record<string, unknown> {
   return contractError(`Unexpected error: ${err}`, "error");
 }
 
-export function registerReadTools(
-  server: McpServer,
-  client: CodecksClient,
-): void {
+export function registerReadTools(server: McpServer, client: CodecksClient): void {
   server.registerTool(
     "get_account",
     {
@@ -52,9 +49,7 @@ export function registerReadTools(
       try {
         const result = await client.getAccount();
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -79,40 +74,20 @@ export function registerReadTools(
         status: z
           .string()
           .optional()
-          .describe(
-            "Comma-separated: not_started, started, done, blocked, in_review",
-          ),
+          .describe("Comma-separated: not_started, started, done, blocked, in_review"),
         project: z.string().optional().describe("Filter by project name"),
         search: z.string().optional().describe("Search in title and content"),
         milestone: z.string().optional().describe("Filter by milestone name"),
         tag: z.string().optional().describe("Filter by tag name"),
-        owner: z
-          .string()
-          .optional()
-          .describe("Owner name, or 'none' for unassigned"),
-        priority: z
-          .string()
-          .optional()
-          .describe("Comma-separated: a, b, c, null"),
+        owner: z.string().optional().describe("Owner name, or 'none' for unassigned"),
+        priority: z.string().optional().describe("Comma-separated: a, b, c, null"),
         sort: z
-          .enum([
-            "status",
-            "priority",
-            "effort",
-            "deck",
-            "title",
-            "owner",
-            "updated",
-            "created",
-          ])
+          .enum(["status", "priority", "effort", "deck", "title", "owner", "updated", "created"])
           .optional(),
         card_type: z.enum(["hero", "doc"]).optional(),
         hero: z.string().optional().describe("Filter by hero card UUID"),
         hand_only: z.boolean().default(false),
-        stale_days: z
-          .number()
-          .optional()
-          .describe("Cards not updated in N days"),
+        stale_days: z.number().optional().describe("Cards not updated in N days"),
         updated_after: z.string().optional().describe("YYYY-MM-DD"),
         updated_before: z.string().optional().describe("YYYY-MM-DD"),
         archived: z.boolean().default(false),
@@ -155,9 +130,7 @@ export function registerReadTools(
           offset: args.offset,
         };
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(payload)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(payload)) }],
         };
       } catch (err) {
         return {
@@ -184,10 +157,7 @@ export function registerReadTools(
           .boolean()
           .default(true)
           .describe("False to strip body for metadata-only checks"),
-        include_conversations: z
-          .boolean()
-          .default(true)
-          .describe("False to skip comment threads"),
+        include_conversations: z.boolean().default(true).describe("False to skip comment threads"),
         archived: z.boolean().default(false),
       }),
     },
@@ -224,8 +194,7 @@ export function registerReadTools(
     "list_decks",
     {
       title: "List Decks",
-      description:
-        "List all decks. Set include_card_counts=True for per-deck counts.",
+      description: "List all decks. Set include_card_counts=True for per-deck counts.",
       inputSchema: z.object({
         include_card_counts: z.boolean().default(false),
       }),
@@ -234,9 +203,7 @@ export function registerReadTools(
       try {
         const result = await client.listDecks(args.include_card_counts);
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -262,9 +229,7 @@ export function registerReadTools(
       try {
         const result = await client.listProjects();
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -290,9 +255,7 @@ export function registerReadTools(
       try {
         const result = await client.listMilestones();
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -318,9 +281,7 @@ export function registerReadTools(
       try {
         const result = await client.listTags();
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -351,9 +312,7 @@ export function registerReadTools(
           content: [
             {
               type: "text",
-              text: JSON.stringify(
-                finalizeToolResult(sanitizeActivity(result)),
-              ),
+              text: JSON.stringify(finalizeToolResult(sanitizeActivity(result))),
             },
           ],
         };
@@ -374,16 +333,12 @@ export function registerReadTools(
     "pm_focus",
     {
       title: "PM Focus",
-      description:
-        "PM focus dashboard: blocked, stale, unassigned, and suggested next cards.",
+      description: "PM focus dashboard: blocked, stale, unassigned, and suggested next cards.",
       inputSchema: z.object({
         project: z.string().optional().describe("Filter to a specific project"),
         owner: z.string().optional().describe("Filter to a specific owner"),
         limit: z.number().default(5).describe("Max cards per category"),
-        stale_days: z
-          .number()
-          .default(14)
-          .describe("Days since last update to consider stale"),
+        stale_days: z.number().default(14).describe("Days since last update to consider stale"),
       }),
     },
     async (args) => {
@@ -398,17 +353,12 @@ export function registerReadTools(
         for (const key of ["blocked", "in_review", "stale", "suggested"]) {
           if (Array.isArray((result as Record<string, unknown>)[key])) {
             (result as Record<string, unknown>)[key] = (
-              (result as Record<string, unknown>)[key] as Record<
-                string,
-                unknown
-              >[]
+              (result as Record<string, unknown>)[key] as Record<string, unknown>[]
             ).map((c) => sanitizeCard(slimCard(c)));
           }
         }
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
@@ -427,13 +377,9 @@ export function registerReadTools(
     "standup",
     {
       title: "Standup",
-      description:
-        "Daily standup summary: recently done, in-progress, blocked, and hand.",
+      description: "Daily standup summary: recently done, in-progress, blocked, and hand.",
       inputSchema: z.object({
-        days: z
-          .number()
-          .default(2)
-          .describe("Lookback window for recently done cards"),
+        days: z.number().default(2).describe("Lookback window for recently done cards"),
         project: z.string().optional(),
         owner: z.string().optional(),
       }),
@@ -448,17 +394,12 @@ export function registerReadTools(
         for (const key of ["recently_done", "in_progress", "blocked", "hand"]) {
           if (Array.isArray((result as Record<string, unknown>)[key])) {
             (result as Record<string, unknown>)[key] = (
-              (result as Record<string, unknown>)[key] as Record<
-                string,
-                unknown
-              >[]
+              (result as Record<string, unknown>)[key] as Record<string, unknown>[]
             ).map((c) => sanitizeCard(slimCard(c)));
           }
         }
         return {
-          content: [
-            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
-          ],
+          content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }],
         };
       } catch (err) {
         return {
