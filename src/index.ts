@@ -49,9 +49,8 @@ async function main(): Promise<void> {
     // Dynamic import to avoid loading express for stdio users
     const { default: express } = await import("express");
     const { randomUUID } = await import("node:crypto");
-    const {
-      StreamableHTTPServerTransport,
-    } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
+    const { StreamableHTTPServerTransport } =
+      await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
 
     const app = express();
     app.use(express.json());

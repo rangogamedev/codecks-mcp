@@ -22,12 +22,7 @@ async function httpRequest(
     idempotent?: boolean;
   } = {},
 ): Promise<unknown> {
-  const {
-    data,
-    method = "POST",
-    headers = {},
-    idempotent = false,
-  } = options;
+  const { data, method = "POST", headers = {}, idempotent = false } = options;
 
   const body = data ? JSON.stringify(data) : undefined;
   const maxAttempts = 1 + Math.max(0, idempotent ? config.httpMaxRetries : 0);
@@ -54,8 +49,7 @@ async function httpRequest(
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
         const retryable = RETRYABLE_HTTP_CODES.has(response.status);
-        const canRetry =
-          idempotent && attempt < maxAttempts - 1 && retryable;
+        const canRetry = idempotent && attempt < maxAttempts - 1 && retryable;
 
         if (canRetry) {
           const retryAfter =

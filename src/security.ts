@@ -57,7 +57,9 @@ const USER_TEXT_FIELDS = new Set([
   "milestone_name",
 ]);
 
-export function sanitizeCard(card: Record<string, unknown>): Record<string, unknown> {
+export function sanitizeCard(
+  card: Record<string, unknown>,
+): Record<string, unknown> {
   const out = { ...card };
   const warnings: string[] = [];
 
@@ -88,18 +90,18 @@ export function sanitizeCard(card: Record<string, unknown>): Record<string, unkn
       (conv) => {
         const tagged = { ...conv };
         if (Array.isArray(tagged.messages)) {
-          tagged.messages = (
-            tagged.messages as Record<string, unknown>[]
-          ).map((msg) => {
-            const m = { ...msg };
-            if (typeof m.content === "string") {
-              for (const desc of checkInjection(m.content as string)) {
-                warnings.push(`conversation.message: ${desc}`);
+          tagged.messages = (tagged.messages as Record<string, unknown>[]).map(
+            (msg) => {
+              const m = { ...msg };
+              if (typeof m.content === "string") {
+                for (const desc of checkInjection(m.content as string)) {
+                  warnings.push(`conversation.message: ${desc}`);
+                }
+                m.content = tagUserText(m.content as string);
               }
-              m.content = tagUserText(m.content as string);
-            }
-            return m;
-          });
+              return m;
+            },
+          );
         }
         return tagged;
       },
@@ -113,7 +115,9 @@ export function sanitizeCard(card: Record<string, unknown>): Record<string, unkn
   return out;
 }
 
-export function sanitizeActivity(data: Record<string, unknown>): Record<string, unknown> {
+export function sanitizeActivity(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out = { ...data };
   if (out.cards && typeof out.cards === "object" && !Array.isArray(out.cards)) {
     const cards = out.cards as Record<string, Record<string, unknown>>;
@@ -130,7 +134,9 @@ export function sanitizeActivity(data: Record<string, unknown>): Record<string, 
   return out;
 }
 
-export function sanitizeConversations(data: Record<string, unknown>): Record<string, unknown> {
+export function sanitizeConversations(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out = { ...data };
   for (const [key, val] of Object.entries(out)) {
     if (Array.isArray(val)) {

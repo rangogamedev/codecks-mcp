@@ -16,8 +16,16 @@ function handleError(err: unknown): Record<string, unknown> {
 }
 
 const SLIM_DROP = new Set([
-  "deckId", "deck_id", "milestoneId", "milestone_id", "assignee",
-  "projectId", "project_id", "childCardInfo", "child_card_info", "masterTags",
+  "deckId",
+  "deck_id",
+  "milestoneId",
+  "milestone_id",
+  "assignee",
+  "projectId",
+  "project_id",
+  "childCardInfo",
+  "child_card_info",
+  "masterTags",
 ]);
 
 function slimCard(card: Record<string, unknown>): Record<string, unknown> {
@@ -28,50 +36,102 @@ function slimCard(card: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export function registerHandTools(server: McpServer, client: CodecksClient): void {
-  server.registerTool("list_hand", {
-    title: "List Hand",
-    description: "List cards in the user's hand (personal work queue), sorted by hand order.",
-    inputSchema: z.object({}),
-  }, async () => {
-    try {
-      const result = await client.listHand();
-      const sanitized = result.map((c) => sanitizeCard(slimCard(c)));
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(sanitized)) }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(handleError(err))) }] };
-    }
-  });
+export function registerHandTools(
+  server: McpServer,
+  client: CodecksClient,
+): void {
+  server.registerTool(
+    "list_hand",
+    {
+      title: "List Hand",
+      description:
+        "List cards in the user's hand (personal work queue), sorted by hand order.",
+      inputSchema: z.object({}),
+    },
+    async () => {
+      try {
+        const result = await client.listHand();
+        const sanitized = result.map((c) => sanitizeCard(slimCard(c)));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(finalizeToolResult(sanitized)),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(finalizeToolResult(handleError(err))),
+            },
+          ],
+        };
+      }
+    },
+  );
 
-  server.registerTool("add_to_hand", {
-    title: "Add to Hand",
-    description: "Add cards to the user's hand.",
-    inputSchema: z.object({
-      card_ids: z.array(z.string()).describe("Full 36-char UUIDs"),
-    }),
-  }, async (args) => {
-    try {
-      validateUuidList(args.card_ids);
-      const result = await client.addToHand(args.card_ids);
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(handleError(err))) }] };
-    }
-  });
+  server.registerTool(
+    "add_to_hand",
+    {
+      title: "Add to Hand",
+      description: "Add cards to the user's hand.",
+      inputSchema: z.object({
+        card_ids: z.array(z.string()).describe("Full 36-char UUIDs"),
+      }),
+    },
+    async (args) => {
+      try {
+        validateUuidList(args.card_ids);
+        const result = await client.addToHand(args.card_ids);
+        return {
+          content: [
+            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(finalizeToolResult(handleError(err))),
+            },
+          ],
+        };
+      }
+    },
+  );
 
-  server.registerTool("remove_from_hand", {
-    title: "Remove from Hand",
-    description: "Remove cards from the user's hand.",
-    inputSchema: z.object({
-      card_ids: z.array(z.string()).describe("Full 36-char UUIDs"),
-    }),
-  }, async (args) => {
-    try {
-      validateUuidList(args.card_ids);
-      const result = await client.removeFromHand(args.card_ids);
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(result)) }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: JSON.stringify(finalizeToolResult(handleError(err))) }] };
-    }
-  });
+  server.registerTool(
+    "remove_from_hand",
+    {
+      title: "Remove from Hand",
+      description: "Remove cards from the user's hand.",
+      inputSchema: z.object({
+        card_ids: z.array(z.string()).describe("Full 36-char UUIDs"),
+      }),
+    },
+    async (args) => {
+      try {
+        validateUuidList(args.card_ids);
+        const result = await client.removeFromHand(args.card_ids);
+        return {
+          content: [
+            { type: "text", text: JSON.stringify(finalizeToolResult(result)) },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(finalizeToolResult(handleError(err))),
+            },
+          ],
+        };
+      }
+    },
+  );
 }

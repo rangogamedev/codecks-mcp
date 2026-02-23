@@ -10,10 +10,7 @@ import { CliError, SetupError } from "./errors.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getField(
-  obj: Record<string, unknown>,
-  ...keys: string[]
-): unknown {
+function getField(obj: Record<string, unknown>, ...keys: string[]): unknown {
   for (const key of keys) {
     if (key in obj) return obj[key];
   }
@@ -44,25 +41,27 @@ export class CodecksClient {
 
   // ---- Cards ----
 
-  async listCards(options: {
-    deck?: string;
-    status?: string;
-    project?: string;
-    search?: string;
-    milestone?: string;
-    tag?: string;
-    owner?: string;
-    priority?: string;
-    sort?: string;
-    cardType?: string;
-    hero?: string;
-    handOnly?: boolean;
-    staleDays?: number;
-    updatedAfter?: string;
-    updatedBefore?: string;
-    archived?: boolean;
-    includeStats?: boolean;
-  } = {}): Promise<Record<string, unknown>> {
+  async listCards(
+    options: {
+      deck?: string;
+      status?: string;
+      project?: string;
+      search?: string;
+      milestone?: string;
+      tag?: string;
+      owner?: string;
+      priority?: string;
+      sort?: string;
+      cardType?: string;
+      hero?: string;
+      handOnly?: boolean;
+      staleDays?: number;
+      updatedAfter?: string;
+      updatedBefore?: string;
+      archived?: boolean;
+      includeStats?: boolean;
+    } = {},
+  ): Promise<Record<string, unknown>> {
     // Build query filters
     const filters: Record<string, unknown> = {};
     if (options.status) {
@@ -110,8 +109,8 @@ export class CodecksClient {
     if (options.deck) {
       cards = cards.filter(
         (c) =>
-          String(getField(c, "deck_name", "deckName") ?? "")
-            .toLowerCase() === options.deck!.toLowerCase(),
+          String(getField(c, "deck_name", "deckName") ?? "").toLowerCase() ===
+          options.deck!.toLowerCase(),
       );
     }
     if (options.search) {
@@ -132,9 +131,7 @@ export class CodecksClient {
       } else {
         const name = options.owner.toLowerCase();
         cards = cards.filter(
-          (c) =>
-            String(c.owner_name ?? "")
-              .toLowerCase() === name,
+          (c) => String(c.owner_name ?? "").toLowerCase() === name,
         );
       }
     }
@@ -172,10 +169,7 @@ export class CodecksClient {
       archived?: boolean;
     } = {},
   ): Promise<Record<string, unknown>> {
-    const {
-      includeContent = true,
-      includeConversations = true,
-    } = options;
+    const { includeContent = true, includeConversations = true } = options;
 
     const fields: unknown[] = [
       "id",
@@ -205,9 +199,7 @@ export class CodecksClient {
 
   // ---- Decks ----
 
-  async listDecks(
-    includeCardCounts = false,
-  ): Promise<Record<string, unknown>> {
+  async listDecks(includeCardCounts = false): Promise<Record<string, unknown>> {
     const fields: unknown[] = ["id", "title"];
     if (includeCardCounts) fields.push({ cards: ["id"] });
 
@@ -218,7 +210,9 @@ export class CodecksClient {
     return {
       decks: decks.map((d) => ({
         ...d,
-        card_count: Array.isArray(d.cards) ? (d.cards as unknown[]).length : undefined,
+        card_count: Array.isArray(d.cards)
+          ? (d.cards as unknown[]).length
+          : undefined,
       })),
     };
   }
@@ -229,9 +223,7 @@ export class CodecksClient {
     const result = await query({
       _root: [
         {
-          account: [
-            { projects: ["id", "title", { decks: ["id", "title"] }] },
-          ],
+          account: [{ projects: ["id", "title", { decks: ["id", "title"] }] }],
         },
       ],
     });
@@ -284,12 +276,14 @@ export class CodecksClient {
 
   // ---- PM Focus ----
 
-  async pmFocus(options: {
-    project?: string;
-    owner?: string;
-    limit?: number;
-    staleDays?: number;
-  } = {}): Promise<Record<string, unknown>> {
+  async pmFocus(
+    options: {
+      project?: string;
+      owner?: string;
+      limit?: number;
+      staleDays?: number;
+    } = {},
+  ): Promise<Record<string, unknown>> {
     const { limit = 5, staleDays = 14 } = options;
     const all = await this.listCards({
       status: "not_started,started,blocked,in_review",
@@ -298,9 +292,7 @@ export class CodecksClient {
     });
     const cards = (all.cards ?? []) as Record<string, unknown>[];
 
-    const blocked = cards
-      .filter((c) => c.status === "blocked")
-      .slice(0, limit);
+    const blocked = cards.filter((c) => c.status === "blocked").slice(0, limit);
     const inReview = cards
       .filter((c) => c.status === "in_review")
       .slice(0, limit);
@@ -326,17 +318,21 @@ export class CodecksClient {
       blocked,
       in_review: inReview,
       stale,
-      suggested: cards.filter((c) => c.status === "not_started").slice(0, limit),
+      suggested: cards
+        .filter((c) => c.status === "not_started")
+        .slice(0, limit),
     };
   }
 
   // ---- Standup ----
 
-  async standup(options: {
-    days?: number;
-    project?: string;
-    owner?: string;
-  } = {}): Promise<Record<string, unknown>> {
+  async standup(
+    options: {
+      days?: number;
+      project?: string;
+      owner?: string;
+    } = {},
+  ): Promise<Record<string, unknown>> {
     const { days = 2 } = options;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -357,9 +353,7 @@ export class CodecksClient {
             )! >= cutoff,
         )
         .slice(0, 10),
-      in_progress: cards
-        .filter((c) => c.status === "started")
-        .slice(0, 10),
+      in_progress: cards.filter((c) => c.status === "started").slice(0, 10),
       blocked: cards.filter((c) => c.status === "blocked").slice(0, 10),
       hand: [],
     };
@@ -582,7 +576,8 @@ export class CodecksClient {
     const all = await this.listCards({ deck: options.deck });
     const cards = (all.cards ?? []) as Record<string, unknown>[];
     const features = cards.filter(
-      (c) => !Array.isArray(c.sub_cards) || (c.sub_cards as unknown[]).length === 0,
+      (c) =>
+        !Array.isArray(c.sub_cards) || (c.sub_cards as unknown[]).length === 0,
     );
 
     if (options.dryRun) {
@@ -678,9 +673,7 @@ export class CodecksClient {
     return { ok: true, thread_id: threadId, result };
   }
 
-  async listConversations(
-    cardId: string,
-  ): Promise<Record<string, unknown>> {
+  async listConversations(cardId: string): Promise<Record<string, unknown>> {
     const result = await query({
       card: {
         _args: { id: cardId },
@@ -707,7 +700,8 @@ export class CodecksClient {
     for (const val of Object.values(result)) {
       if (typeof val === "object" && val !== null) {
         const obj = val as Record<string, unknown>;
-        if (Array.isArray(obj.cards)) return obj.cards as Record<string, unknown>[];
+        if (Array.isArray(obj.cards))
+          return obj.cards as Record<string, unknown>[];
         // Recurse one level
         for (const inner of Object.values(obj)) {
           if (typeof inner === "object" && inner !== null) {
