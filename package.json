@@ -1,0 +1,66 @@
+{
+  "name": "codecks-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Codecks project management — 38 tools for cards, decks, milestones, tags, and PM workflows",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "codecks-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "server.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "codecks",
+    "mcp",
+    "model-context-protocol",
+    "project-management",
+    "game-dev"
+  ],
+  "author": "rangogamedev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rangogamedev/codecks-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rangogamedev/codecks-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.0",
+    "express": "^5.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.6.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/registry/schema/server.schema.json",
+  "name": "codecks-mcp",
+  "description": "MCP server for Codecks project management — 38 tools for cards, decks, milestones, tags, and PM workflows",
+  "repository": {
+    "url": "https://github.com/rangogamedev/codecks-mcp",
+    "source": "github"
+  },
+  "version_detail": {
+    "version": "0.1.0",
+    "release_date": "2026-02-23",
+    "is_latest": true
+  },
+  "packages": [
+    {
+      "registry_name": "npm",
+      "name": "codecks-mcp",
+      "version": "0.1.0",
+      "runtime": "node",
+      "runtime_arguments": [],
+      "package_arguments": [],
+      "environment_variables": [
+        {
+          "name": "CODECKS_TOKEN",
+          "description": "Codecks session cookie (at cookie from browser DevTools)",
+          "required": true
+        },
+        {
+          "name": "CODECKS_ACCOUNT",
+          "description": "Codecks account slug",
+          "required": true
+        },
+        {
+          "name": "CODECKS_REPORT_TOKEN",
+          "description": "Report token for card creation (never expires)",
+          "required": false
+        },
+        {
+          "name": "CODECKS_USER_ID",
+          "description": "User ID for hand operations (auto-discovered if unset)",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "tools": [
+    { "name": "get_account", "description": "Get current account info" },
+    { "name": "list_cards", "description": "List and filter cards" },
+    { "name": "get_card", "description": "Get full card details" },
+    { "name": "list_decks", "description": "List all decks" },
+    { "name": "list_projects", "description": "List projects with decks" },
+    { "name": "list_milestones", "description": "List milestones" },
+    { "name": "list_tags", "description": "List project-level tags" },
+    { "name": "list_activity", "description": "Recent activity feed" },
+    { "name": "pm_focus", "description": "PM focus dashboard" },
+    { "name": "standup", "description": "Daily standup summary" },
+    { "name": "list_hand", "description": "List hand cards" },
+    { "name": "add_to_hand", "description": "Add cards to hand" },
+    { "name": "remove_from_hand", "description": "Remove cards from hand" },
+    { "name": "create_card", "description": "Create a new card" },
+    { "name": "update_cards", "description": "Update card properties" },
+    { "name": "mark_done", "description": "Mark cards done" },
+    { "name": "mark_started", "description": "Mark cards started" },
+    { "name": "archive_card", "description": "Archive a card" },
+    { "name": "unarchive_card", "description": "Restore archived card" },
+    { "name": "delete_card", "description": "Permanently delete card" },
+    { "name": "scaffold_feature", "description": "Create hero + lane sub-cards" },
+    { "name": "split_features", "description": "Batch-split features into lanes" },
+    { "name": "create_comment", "description": "Start comment thread" },
+    { "name": "reply_comment", "description": "Reply to thread" },
+    { "name": "close_comment", "description": "Close comment thread" },
+    { "name": "reopen_comment", "description": "Reopen comment thread" },
+    { "name": "list_conversations", "description": "List comment threads" },
+    { "name": "get_pm_playbook", "description": "PM methodology guide" },
+    { "name": "get_workflow_preferences", "description": "Load preferences" },
+    { "name": "save_workflow_preferences", "description": "Save preferences" },
+    { "name": "save_cli_feedback", "description": "Save feedback item" },
+    { "name": "get_cli_feedback", "description": "Read feedback items" }
+  ]
+}

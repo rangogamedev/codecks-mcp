@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.tgz
+.DS_Store
+coverage/
+.plan_metrics.jsonl
+task_plan.md
+findings.md
+progress.md
+.pm_preferences.json
+.cli_feedback.json
+.claude/
