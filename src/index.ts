@@ -53,13 +53,14 @@ async function main(): Promise<void> {
       await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
 
     const app = express();
-    app.use(express.json());
+
+    // MCP endpoint — do NOT use express.json() here, the transport reads raw body
+    const httpTransport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    });
+    await server.connect(httpTransport);
 
     app.post("/mcp", async (req, res) => {
-      const httpTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-      });
-      await server.connect(httpTransport);
       await httpTransport.handleRequest(req, res);
     });
 
